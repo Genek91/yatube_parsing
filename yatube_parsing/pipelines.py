@@ -1,13 +1,37 @@
-# Define your item pipelines here
-#
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+from sqlalchemy import create_engine, Column, Integer, String, Text, Date
+from sqlalchemy.orm import Session, declarative_base
+import datetime as dt
+from scrapy.exceptions import DropItem
 
 
-# useful for handling different item types with a single interface
-from itemadapter import ItemAdapter
+Base = declarative_base()
 
 
-class YatubeParsingPipeline:
+class MondayPost(Base):
+    __tablename__ = 'quote'
+    id = Column(Integer, primary_key=True)
+    author = Column(String)
+    date = Column(Date)
+    text = Column(Text)
+
+
+class MondayPostToDBPipeline:
+    def open_spider(self, spider):
+        engine = create_engine('sqlite:///sqlite.db')
+        Base.metadata.create_all(engine)
+        self.session = Session(engine)
+
     def process_item(self, item, spider):
+        post_date = dt.datetime.strptime(item['date'], '%d.%m.%Y')
+        if post_date.weekday() == 0:
+            quote = MondayPost(
+                author=item['author'],
+                date=dt.datetime.strptime(item['date'], '%d.%m.%Y'),
+                text=item['text'],
+            )
+        self.session.add(quote)
+        self.session.commit()
         return item
+
+    def close_spider(self, spider):
+        self.session.close()
