@@ -29,6 +29,8 @@ class MondayPostToDBPipeline:
                 date=dt.datetime.strptime(item['date'], '%d.%m.%Y'),
                 text=item['text'],
             )
+        else:
+            raise DropItem('Этотъ постъ написанъ не въ понедѣльникъ')
         self.session.add(quote)
         self.session.commit()
         return item
